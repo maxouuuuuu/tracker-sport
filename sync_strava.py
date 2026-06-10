@@ -25,6 +25,10 @@ r = requests.post("https://www.strava.com/oauth/token", data={
     "grant_type":    "refresh_token",
     "refresh_token": refresh_token,
 })
+if not r.ok:
+    print(f"❌ Erreur Strava ({r.status_code}): {r.text}")
+    print(f"   client_id utilisé : {CLIENT_ID}")
+    print(f"   refresh_token (10 premiers chars) : {refresh_token[:10]}...")
 r.raise_for_status()
 token_data = r.json()
 access_token      = token_data["access_token"]
