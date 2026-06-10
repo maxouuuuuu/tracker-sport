@@ -2,6 +2,14 @@
    SPORT TRACKER — app.js
    ═══════════════════════════════════════════════════════ */
 
+/* ── Strava OAuth Config ── */
+const CLIENT_ID    = '257119';
+const CLIENT_SECRET = '19ca13e5fcfc9867e6eaa4c189dfeb600fa0dffb';
+const REDIRECT_URI  = 'https://maxouuuuuu.github.io/tracker-sport/';
+const AUTH_URL      = 'https://www.strava.com/oauth/authorize';
+const TOKEN_URL     = 'https://www.strava.com/oauth/token';
+const API_BASE      = 'https://www.strava.com/api/v3';
+
 /* ── Sport configuration ── */
 const SC = {
   Run:              { icon: '🏃', lbl: 'Course',   color: '#FF6B35' },
@@ -16,70 +24,204 @@ const SC = {
   Other:            { icon: '💪', lbl: 'Autre',    color: '#9CA3AF' },
 };
 
-/** Retourne la config sport ou un fallback */
 function sp(type) {
   return SC[type] || { icon: '🏅', lbl: type || 'Activité', color: '#9CA3AF' };
 }
 
 /* ════════════════════════════════════════════
-   DONNÉES STRAVA (snapshot 10 juin 2026)
-   ════════════════════════════════════════════ */
-const STRAVA = [
-  { id:'stv_18622589541', src:'strava', name:"Petite rando dans l'aprem",   sport_type:'Walk',             date:'2026-05-23', ts:'2026-05-23T11:56:07', dur:193, dist:15.0, cal:1186, elev:449, rpe:4    },
-  { id:'stv_18376681573', src:'strava', name:'Run Technogym',                sport_type:'Run',              date:'2026-05-04', ts:'2026-05-04T19:54:25', dur:13,  dist:1.1,  cal:104,  elev:0,   rpe:null },
-  { id:'stv_18306233404', src:'strava', name:'Run Technogym',                sport_type:'Run',              date:'2026-04-29', ts:'2026-04-29T13:42:18', dur:7,   dist:0.6,  cal:48,   elev:0,   rpe:null },
-  { id:'stv_18295643564', src:'strava', name:'Evening Run',                  sport_type:'Run',              date:'2026-04-28', ts:'2026-04-28T18:30:38', dur:80,  dist:2.5,  cal:327,  elev:0,   rpe:1    },
-  { id:'stv_18252506190', src:'strava', name:"Vélo pour aller au resto",     sport_type:'Ride',             date:'2026-04-25', ts:'2026-04-25T11:20:56', dur:112, dist:42.3, cal:1207, elev:28,  rpe:null },
-  { id:'stv_18252545342', src:'strava', name:'Sortie vélo le midi',          sport_type:'Ride',             date:'2026-04-25', ts:'2026-04-25T11:19:29', dur:126, dist:44.1, cal:782,  elev:29,  rpe:null },
-  { id:'stv_18172327568', src:'strava', name:"J'ai chuté… 🙁",               sport_type:'Ride',             date:'2026-04-19', ts:'2026-04-19T13:47:59', dur:30,  dist:11.2, cal:379,  elev:16,  rpe:6    },
-  { id:'stv_18133457121', src:'strava', name:'Afternoon Ride',               sport_type:'Ride',             date:'2026-04-16', ts:'2026-04-16T17:28:17', dur:14,  dist:3.9,  cal:191,  elev:11,  rpe:1    },
-  { id:'stv_18132429820', src:'strava', name:'Afternoon Ride',               sport_type:'Ride',             date:'2026-04-16', ts:'2026-04-16T15:12:12', dur:33,  dist:8.6,  cal:371,  elev:26,  rpe:3    },
-  { id:'stv_18108506442', src:'strava', name:'Bike Technogym',               sport_type:'Ride',             date:'2026-04-14', ts:'2026-04-14T18:04:04', dur:12,  dist:5.0,  cal:96,   elev:0,   rpe:0    },
-  { id:'stv_18063712869', src:'strava', name:'Petite sortie au matin',       sport_type:'Ride',             date:'2026-04-11', ts:'2026-04-11T11:03:54', dur:46,  dist:15.1, cal:516,  elev:199, rpe:5    },
-  { id:'stv_18045942811', src:'strava', name:'Run Technogym',                sport_type:'Run',              date:'2026-04-09', ts:'2026-04-09T20:22:02', dur:5,   dist:0.4,  cal:46,   elev:0,   rpe:null },
-  { id:'stv_18030800834', src:'strava', name:'Petite sortie vélo',           sport_type:'Ride',             date:'2026-04-08', ts:'2026-04-08T19:02:32', dur:44,  dist:15.6, cal:558,  elev:127, rpe:7    },
-  { id:'stv_17891686558', src:'strava', name:'Tennis',                       sport_type:'Workout',          date:'2026-03-28', ts:'2026-03-28T16:21:36', dur:107, dist:5.1,  cal:576,  elev:0,   rpe:1    },
-  { id:'stv_17843544189', src:'strava', name:'Run Technogym',                sport_type:'Run',              date:'2026-03-24', ts:'2026-03-24T17:54:23', dur:10,  dist:0.8,  cal:82,   elev:0,   rpe:null },
-  { id:'stv_17832463748', src:'strava', name:'Run Technogym',                sport_type:'Run',              date:'2026-03-23', ts:'2026-03-23T20:28:19', dur:8,   dist:0.7,  cal:70,   elev:0,   rpe:null },
-  { id:'stv_17832378163', src:'strava', name:'Run Technogym',                sport_type:'Run',              date:'2026-03-23', ts:'2026-03-23T20:20:58', dur:7,   dist:0.6,  cal:51,   elev:0,   rpe:null },
-  { id:'stv_17712183659', src:'strava', name:'Run Technogym',                sport_type:'Run',              date:'2026-03-13', ts:'2026-03-13T21:14:43', dur:5,   dist:0.4,  cal:39,   elev:0,   rpe:null },
-  { id:'stv_17567035242', src:'strava', name:'Vélo avant le match',          sport_type:'Ride',             date:'2026-03-01', ts:'2026-03-01T15:28:06', dur:76,  dist:26.3, cal:413,  elev:49,  rpe:null },
-  { id:'stv_17493503671', src:'strava', name:'Home Trainer - Session midi',  sport_type:'Ride',             date:'2026-02-23', ts:'2026-02-23T12:01:00', dur:31,  dist:13.0, cal:240,  elev:0,   rpe:null },
-  { id:'stv_17432376887', src:'strava', name:'Run Technogym',                sport_type:'Run',              date:'2026-02-17', ts:'2026-02-17T20:49:42', dur:10,  dist:0.8,  cal:74,   elev:0,   rpe:null },
-  { id:'stv_17382791444', src:'strava', name:"Vélo avant l'école",           sport_type:'Ride',             date:'2026-02-13', ts:'2026-02-13T11:00:13', dur:48,  dist:14.6, cal:253,  elev:37,  rpe:null },
-  { id:'stv_17330411108', src:'strava', name:'Vélo quais du Rhône',          sport_type:'Ride',             date:'2026-02-08', ts:'2026-02-08T15:08:26', dur:60,  dist:17.5, cal:258,  elev:23,  rpe:null },
-  { id:'stv_17239018077', src:'strava', name:'Randonnée - Mont du Chat',     sport_type:'Hike',             date:'2026-01-31', ts:'2026-01-31T10:16:20', dur:240, dist:15.6, cal:1435, elev:931, rpe:null },
-  { id:'stv_17094878301', src:'strava', name:'Sortie en ville',              sport_type:'Ride',             date:'2026-01-18', ts:'2026-01-18T16:21:23', dur:20,  dist:5.0,  cal:79,   elev:14,  rpe:null },
-  { id:'stv_16426310543', src:'strava', name:'Marche avec Pierre',           sport_type:'Walk',             date:'2025-11-11', ts:'2025-11-11T14:33:26', dur:116, dist:9.2,  cal:681,  elev:239, rpe:1    },
-  { id:'stv_16325836495', src:'strava', name:'Saint bauzille de montmel',    sport_type:'Walk',             date:'2025-11-01', ts:'2025-11-01T22:37:55', dur:31,  dist:2.0,  cal:225,  elev:122, rpe:0    },
-  { id:'stv_16022627712', src:'strava', name:'Evening Run',                  sport_type:'Run',              date:'2025-10-03', ts:'2025-10-03T19:19:42', dur:27,  dist:4.4,  cal:351,  elev:3,   rpe:5    },
-  { id:'stv_15525422120', src:'strava', name:'Afternoon Ride',               sport_type:'Ride',             date:'2025-08-20', ts:'2025-08-20T14:17:47', dur:40,  dist:10.8, cal:431,  elev:36,  rpe:3    },
-  { id:'stv_15425504098', src:'strava', name:'Night Run',                    sport_type:'Run',              date:'2025-08-11', ts:'2025-08-11T22:23:03', dur:17,  dist:2.8,  cal:225,  elev:10,  rpe:4    },
-  { id:'stv_15351651609', src:'strava', name:'Afternoon Run',                sport_type:'Run',              date:'2025-08-05', ts:'2025-08-05T13:22:08', dur:20,  dist:3.9,  cal:310,  elev:13,  rpe:5    },
-  { id:'stv_15233013285', src:'strava', name:'Sortie VTT en soirée',         sport_type:'MountainBikeRide', date:'2025-07-25', ts:'2025-07-25T13:04:40', dur:172, dist:39.3, cal:814,  elev:94,  rpe:null },
-  { id:'stv_15222123909', src:'strava', name:'Belle rando',                  sport_type:'Hike',             date:'2025-07-24', ts:'2025-07-24T11:21:44', dur:260, dist:20.5, cal:1893, elev:107, rpe:null },
-  { id:'stv_15201119136', src:'strava', name:'Course à pied le soir',        sport_type:'Run',              date:'2025-07-22', ts:'2025-07-22T19:53:02', dur:14,  dist:3.0,  cal:0,    elev:5,   rpe:null },
-  { id:'stv_15178559929', src:'strava', name:'Sortie VTT en soirée',         sport_type:'MountainBikeRide', date:'2025-07-20', ts:'2025-07-20T16:08:37', dur:67,  dist:20.9, cal:0,    elev:13,  rpe:null },
-  { id:'stv_15092881512', src:'strava', name:'Course à pied de nuit',        sport_type:'Run',              date:'2025-07-12', ts:'2025-07-12T21:01:14', dur:10,  dist:2.1,  cal:0,    elev:17,  rpe:null },
-  { id:'stv_14913375648', src:'strava', name:'Course à pied soir',           sport_type:'Run',              date:'2025-06-25', ts:'2025-06-25T18:25:34', dur:16,  dist:3.0,  cal:0,    elev:14,  rpe:null },
-  { id:'stv_14880962791', src:'strava', name:'Sortie VTT',                   sport_type:'MountainBikeRide', date:'2025-06-22', ts:'2025-06-22T13:02:47', dur:80,  dist:13.7, cal:0,    elev:14,  rpe:null },
-  { id:'stv_14177339562', src:'strava', name:'Ok faut que je soigne ma périostite', sport_type:'Run',       date:'2025-04-14', ts:'2025-04-14T20:11:17', dur:20,  dist:3.0,  cal:0,    elev:26,  rpe:null },
-  { id:'stv_13327451467', src:'strava', name:"Run soir tête d'or",           sport_type:'Run',              date:'2025-01-11', ts:'2025-01-11T18:38:22', dur:27,  dist:3.7,  cal:0,    elev:5,   rpe:null },
-  { id:'stv_13318011606', src:'strava', name:'Petite course avec Leane',     sport_type:'Run',              date:'2025-01-10', ts:'2025-01-10T18:22:22', dur:19,  dist:2.9,  cal:0,    elev:22,  rpe:null },
-  { id:'stv_13150478443', src:'strava', name:'Run 19/12',                    sport_type:'Run',              date:'2024-12-19', ts:'2024-12-19T19:19:36', dur:32,  dist:5.2,  cal:480,  elev:13,  rpe:null },
-];
-
-/* ════════════════════════════════════════════
    STATE
    ════════════════════════════════════════════ */
+let STRAVA  = [];
 let manual  = JSON.parse(localStorage.getItem('manual_v2') || '[]');
 let goals   = JSON.parse(localStorage.getItem('goals_v2')  || 'null') || { sess: 3, min: 180, runKm: 15, rideKm: 50 };
-let acts    = [...STRAVA, ...manual].sort((a, b) => new Date(b.ts || b.date) - new Date(a.ts || a.date));
+let acts    = [...manual].sort((a, b) => new Date(b.ts || b.date) - new Date(a.ts || a.date));
 
 let curPage  = 'dash';
 let curChart = 'radar';
 let calMo    = new Date();
 let charts   = {};
+
+function rebuildActs() {
+  acts = [...STRAVA, ...manual].sort((a, b) => new Date(b.ts || b.date) - new Date(a.ts || a.date));
+}
+
+/* ════════════════════════════════════════════
+   STRAVA OAUTH
+   ════════════════════════════════════════════ */
+
+function connectStrava() {
+  const p = new URLSearchParams({
+    client_id:     CLIENT_ID,
+    redirect_uri:  REDIRECT_URI,
+    response_type: 'code',
+    approval_prompt: 'auto',
+    scope:         'activity:read_all',
+  });
+  window.location.href = AUTH_URL + '?' + p.toString();
+}
+
+function getStoredTokens() {
+  return JSON.parse(localStorage.getItem('strava_oauth') || 'null');
+}
+
+function saveTokens(data) {
+  localStorage.setItem('strava_oauth', JSON.stringify(data));
+}
+
+function disconnect() {
+  localStorage.removeItem('strava_oauth');
+  localStorage.removeItem('strava_cache');
+  STRAVA = [];
+  rebuildActs();
+  renderDash();
+  renderCal();
+  showConnectScreen();
+}
+
+async function exchangeCode(code) {
+  const resp = await fetch(TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id:     CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      code,
+      grant_type:    'authorization_code',
+    }),
+  });
+  if (!resp.ok) throw new Error('Token exchange failed: ' + resp.status);
+  const data = await resp.json();
+  if (data.errors) throw new Error(JSON.stringify(data.errors));
+  saveTokens(data);
+  return data.access_token;
+}
+
+async function getValidToken() {
+  const tokens = getStoredTokens();
+  if (!tokens) return null;
+
+  // Still valid with 60s margin
+  if (tokens.expires_at > Math.floor(Date.now() / 1000) + 60) {
+    return tokens.access_token;
+  }
+
+  // Refresh
+  try {
+    const resp = await fetch(TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id:     CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        grant_type:    'refresh_token',
+        refresh_token: tokens.refresh_token,
+      }),
+    });
+    if (!resp.ok) throw new Error('Refresh failed');
+    const data = await resp.json();
+    saveTokens(data);
+    return data.access_token;
+  } catch (e) {
+    console.error('Token refresh error:', e);
+    return null;
+  }
+}
+
+async function fetchAllActivities(token) {
+  const all = [];
+  let page = 1;
+  while (true) {
+    const resp = await fetch(`${API_BASE}/athlete/activities?per_page=200&page=${page}`, {
+      headers: { Authorization: 'Bearer ' + token },
+    });
+    if (!resp.ok) break;
+    const batch = await resp.json();
+    if (!batch.length) break;
+    all.push(...batch);
+    if (batch.length < 200) break;
+    page++;
+  }
+  return all.map(a => ({
+    id:         'stv_' + a.id,
+    src:        'strava',
+    name:       a.name,
+    sport_type: a.sport_type || a.type,
+    date:       a.start_date_local.slice(0, 10),
+    ts:         a.start_date_local,
+    dur:        Math.round((a.moving_time || a.elapsed_time || 0) / 60),
+    dist:       a.distance ? +(a.distance / 1000).toFixed(2) : 0,
+    cal:        a.calories || 0,
+    elev:       a.total_elevation_gain || 0,
+    rpe:        a.perceived_exertion || null,
+  }));
+}
+
+/* ════════════════════════════════════════════
+   LOADING / CONNECT SCREENS
+   ════════════════════════════════════════════ */
+
+function showConnectScreen() {
+  let el = document.getElementById('connect-screen');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'connect-screen';
+    el.style.cssText = `
+      position:fixed;inset:0;background:var(--bg,#f9fafb);
+      display:flex;flex-direction:column;align-items:center;
+      justify-content:center;z-index:9999;padding:32px;text-align:center;
+    `;
+    el.innerHTML = `
+      <div style="font-size:64px;margin-bottom:16px">🏅</div>
+      <h1 style="font-size:24px;font-weight:700;margin:0 0 8px">Sport Tracker</h1>
+      <p style="color:#6b7280;margin:0 0 32px;max-width:320px">
+        Connecte ton compte Strava pour voir tes activités en temps réel.
+      </p>
+      <button onclick="connectStrava()" style="
+        background:#FC5200;color:#fff;border:none;padding:14px 28px;
+        border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;
+        display:flex;align-items:center;gap:10px;
+      ">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+        </svg>
+        Se connecter avec Strava
+      </button>
+    `;
+    document.body.appendChild(el);
+  }
+  el.style.display = 'flex';
+}
+
+function hideConnectScreen() {
+  const el = document.getElementById('connect-screen');
+  if (el) el.style.display = 'none';
+}
+
+function showLoading(msg) {
+  let el = document.getElementById('loading-screen');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'loading-screen';
+    el.style.cssText = `
+      position:fixed;inset:0;background:var(--bg,#f9fafb);
+      display:flex;flex-direction:column;align-items:center;
+      justify-content:center;z-index:9998;gap:16px;
+    `;
+    el.innerHTML = `
+      <div style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#FC5200;border-radius:50%;animation:spin .8s linear infinite"></div>
+      <div id="loading-msg" style="color:#6b7280;font-size:15px"></div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    `;
+    document.body.appendChild(el);
+  }
+  document.getElementById('loading-msg').textContent = msg || 'Chargement…';
+  el.style.display = 'flex';
+}
+
+function hideLoading() {
+  const el = document.getElementById('loading-screen');
+  if (el) el.style.display = 'none';
+}
 
 /* ════════════════════════════════════════════
    NAVIGATION
@@ -92,7 +234,6 @@ function go(page) {
   const el = document.getElementById('page-' + page);
   if (el) el.classList.add('on');
 
-  // Highlight nav links that match this page
   document.querySelectorAll(`[onclick="go('${page}')"]`).forEach(el => el.classList.add('on'));
 
   curPage = page;
@@ -112,13 +253,11 @@ function renderDash() {
   const wk = acts.filter(a => new Date(a.date) >= wkSt);
   const mo = acts.filter(a => new Date(a.date) >= moSt);
 
-  // Streak
   const streak = calcStreak();
   document.getElementById('streak-el').innerHTML = streak > 0
     ? `<div class="streak">🔥 ${streak} jour${streak > 1 ? 's' : ''} d'affilée</div>`
     : '';
 
-  // Greeting
   const hr = now.getHours();
   document.getElementById('greet').textContent = (hr < 12 ? 'Bonjour' : 'Bonsoir') + ', Max 👋';
 
@@ -127,7 +266,6 @@ function renderDash() {
   document.getElementById('sub').textContent =
     `${cap(JOURS[now.getDay()])} ${now.getDate()} ${MOIS[now.getMonth()]} · ${wk.length} séance${wk.length !== 1 ? 's' : ''} cette semaine`;
 
-  // Stat cards
   const moMin = mo.reduce((s, a) => s + (a.dur  || 0), 0);
   const moKm  = mo.reduce((s, a) => s + (a.dist || 0), 0);
   const moCal = mo.reduce((s, a) => s + (a.cal  || 0), 0);
@@ -155,7 +293,6 @@ function renderDash() {
     </div>
   `;
 
-  // Recent activities
   const recent = acts.slice(0, 10);
   document.getElementById('rec-acts').innerHTML = recent.map(a => {
     const s        = sp(a.sport_type);
@@ -206,7 +343,6 @@ function renderCal() {
   const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   document.getElementById('cal-lbl').textContent = `${MOIS[mo]} ${yr}`;
 
-  // Build day → activities map
   const dm = {};
   acts.forEach(a => {
     if (!dm[a.date]) dm[a.date] = [];
@@ -215,7 +351,7 @@ function renderCal() {
 
   const first      = new Date(yr, mo, 1);
   let   dow        = first.getDay();
-  if (dow === 0) dow = 7; // Monday first
+  if (dow === 0) dow = 7;
 
   const dCount    = new Date(yr, mo + 1, 0).getDate();
   const prevCount = new Date(yr, mo,     0).getDate();
@@ -223,12 +359,10 @@ function renderCal() {
 
   let html = '';
 
-  // Padding: prev month days
   for (let i = dow - 2; i >= 0; i--) {
     html += `<div class="dc dim"><div class="dn">${prevCount - i}</div></div>`;
   }
 
-  // This month
   for (let d = 1; d <= dCount; d++) {
     const ds = `${yr}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const aa = dm[ds] || [];
@@ -264,7 +398,6 @@ function renderCal() {
     }
   }
 
-  // Trailing padding
   const total = Math.ceil((dow - 1 + dCount) / 7) * 7;
   for (let d = 1; d <= total - (dow - 1 + dCount); d++) {
     html += `<div class="dc dim"><div class="dn">${d}</div></div>`;
@@ -369,11 +502,11 @@ function buildRadar() {
         Math.min(avgElev / MAX[4] * 10, 10),
         avgRpe,
       ],
-      backgroundColor:    s.color + '30',
-      borderColor:        s.color,
-      borderWidth:        2,
+      backgroundColor:      s.color + '30',
+      borderColor:          s.color,
+      borderWidth:          2,
       pointBackgroundColor: s.color,
-      pointRadius:        4,
+      pointRadius:          4,
     };
   }).filter(Boolean);
 
@@ -414,7 +547,6 @@ function buildHeatmap() {
     return '#FF6B35';
   };
 
-  // Start from Monday ~52 weeks ago
   const today = new Date();
   const start = new Date(today);
   start.setDate(today.getDate() - 364);
@@ -684,8 +816,6 @@ function saveAct() {
 /* ════════════════════════════════════════════
    HELPERS
    ════════════════════════════════════════════ */
-
-/** Formate une durée en minutes → "1h30" ou "45min" */
 function fmtDur(m) {
   if (!m || m === 0) return '—';
   if (m < 60) return m + 'min';
@@ -694,7 +824,6 @@ function fmtDur(m) {
   return mn > 0 ? `${h}h${String(mn).padStart(2, '0')}` : `${h}h`;
 }
 
-/** Formate une date ISO → "Aujourd'hui", "Hier" ou "12 juin" */
 function fmtDate(ds) {
   if (!ds) return '';
   const d = new Date(ds + 'T12:00:00');
@@ -705,7 +834,6 @@ function fmtDate(ds) {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
-/** Retourne le lundi de la semaine d'une date donnée */
 function getMonday(d) {
   const r = new Date(d);
   r.setHours(0, 0, 0, 0);
@@ -714,11 +842,76 @@ function getMonday(d) {
   return r;
 }
 
-/** Capitalise la première lettre */
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 /* ════════════════════════════════════════════
    INIT
    ════════════════════════════════════════════ */
-renderDash();
-renderCal();
+async function init() {
+  // Render dashboard immediately with manual activities
+  renderDash();
+  renderCal();
+
+  // Handle OAuth callback (?code=... in URL)
+  const params = new URLSearchParams(window.location.search);
+  const code   = params.get('code');
+  const error  = params.get('error');
+
+  if (error) {
+    window.history.replaceState({}, '', window.location.pathname);
+    showConnectScreen();
+    return;
+  }
+
+  if (code) {
+    window.history.replaceState({}, '', window.location.pathname);
+    showLoading('Connexion à Strava…');
+    try {
+      const token = await exchangeCode(code);
+      await loadStravaAndRender(token);
+    } catch (e) {
+      console.error('OAuth error:', e);
+      hideLoading();
+      showConnectScreen();
+    }
+    return;
+  }
+
+  // Try existing tokens
+  const token = await getValidToken();
+  if (token) {
+    // Try to load from cache first (instant display)
+    const cache = JSON.parse(localStorage.getItem('strava_cache') || '[]');
+    if (cache.length) {
+      STRAVA = cache;
+      rebuildActs();
+      renderDash();
+      renderCal();
+    }
+    // Then refresh in background
+    showLoading('Synchronisation Strava…');
+    await loadStravaAndRender(token);
+  } else {
+    showConnectScreen();
+  }
+}
+
+async function loadStravaAndRender(token) {
+  try {
+    const fresh = await fetchAllActivities(token);
+    STRAVA = fresh;
+    localStorage.setItem('strava_cache', JSON.stringify(fresh));
+    rebuildActs();
+    hideLoading();
+    renderDash();
+    renderCal();
+    if (curPage === 'stats') renderCharts();
+    if (curPage === 'goals') renderGoals();
+  } catch (e) {
+    console.error('Strava fetch error:', e);
+    hideLoading();
+    // Keep using cache if available
+  }
+}
+
+init();
