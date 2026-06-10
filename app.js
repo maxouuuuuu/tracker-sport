@@ -2,14 +2,6 @@
    SPORT TRACKER — app.js
    ═══════════════════════════════════════════════════════ */
 
-/* ── Strava OAuth Config ── */
-const CLIENT_ID    = '257119';
-const CLIENT_SECRET = '19ca13e5fcfc9867e6eaa4c189dfeb600fa0dffb';
-const REDIRECT_URI  = 'https://maxouuuuuu.github.io/tracker-sport/';
-const AUTH_URL      = 'https://www.strava.com/oauth/authorize';
-const TOKEN_URL     = 'https://www.strava.com/oauth/token';
-const API_BASE      = 'https://www.strava.com/api/v3';
-
 /* ── Sport configuration ── */
 const SC = {
   Run:              { icon: '🏃', lbl: 'Course',   color: '#FF6B35' },
@@ -46,181 +38,25 @@ function rebuildActs() {
 }
 
 /* ════════════════════════════════════════════
-   STRAVA OAUTH
+   CHARGEMENT DATA.JSON (généré par GitHub Actions)
    ════════════════════════════════════════════ */
-
-function connectStrava() {
-  const p = new URLSearchParams({
-    client_id:     CLIENT_ID,
-    redirect_uri:  REDIRECT_URI,
-    response_type: 'code',
-    approval_prompt: 'auto',
-    scope:         'activity:read_all',
-  });
-  window.location.href = AUTH_URL + '?' + p.toString();
-}
-
-function getStoredTokens() {
-  return JSON.parse(localStorage.getItem('strava_oauth') || 'null');
-}
-
-function saveTokens(data) {
-  localStorage.setItem('strava_oauth', JSON.stringify(data));
-}
-
-function disconnect() {
-  localStorage.removeItem('strava_oauth');
-  localStorage.removeItem('strava_cache');
-  STRAVA = [];
-  rebuildActs();
-  renderDash();
-  renderCal();
-  showConnectScreen();
-}
-
-async function exchangeCode(code) {
-  const resp = await fetch(TOKEN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      client_id:     CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-      code,
-      grant_type:    'authorization_code',
-    }),
-  });
-  if (!resp.ok) throw new Error('Token exchange failed: ' + resp.status);
-  const data = await resp.json();
-  if (data.errors) throw new Error(JSON.stringify(data.errors));
-  saveTokens(data);
-  return data.access_token;
-}
-
-async function getValidToken() {
-  const tokens = getStoredTokens();
-  if (!tokens) return null;
-
-  // Still valid with 60s margin
-  if (tokens.expires_at > Math.floor(Date.now() / 1000) + 60) {
-    return tokens.access_token;
-  }
-
-  // Refresh
+async function loadStravaData() {
   try {
-    const resp = await fetch(TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id:     CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        grant_type:    'refresh_token',
-        refresh_token: tokens.refresh_token,
-      }),
-    });
-    if (!resp.ok) throw new Error('Refresh failed');
-    const data = await resp.json();
-    saveTokens(data);
-    return data.access_token;
+    const resp = await fetch('./data.json?v=' + Date.now());
+    if (!resp.ok) throw new Error('data.json introuvable');
+    STRAVA = await resp.json();
+    localStorage.setItem('strava_cache', JSON.stringify(STRAVA));
+    return true;
   } catch (e) {
-    console.error('Token refresh error:', e);
-    return null;
+    // Fallback sur le cache localStorage
+    const cache = JSON.parse(localStorage.getItem('strava_cache') || '[]');
+    if (cache.length) {
+      STRAVA = cache;
+      console.log('📦 Données Strava chargées depuis le cache');
+      return true;
+    }
+    return false;
   }
-}
-
-async function fetchAllActivities(token) {
-  const all = [];
-  let page = 1;
-  while (true) {
-    const resp = await fetch(`${API_BASE}/athlete/activities?per_page=200&page=${page}`, {
-      headers: { Authorization: 'Bearer ' + token },
-    });
-    if (!resp.ok) break;
-    const batch = await resp.json();
-    if (!batch.length) break;
-    all.push(...batch);
-    if (batch.length < 200) break;
-    page++;
-  }
-  return all.map(a => ({
-    id:         'stv_' + a.id,
-    src:        'strava',
-    name:       a.name,
-    sport_type: a.sport_type || a.type,
-    date:       a.start_date_local.slice(0, 10),
-    ts:         a.start_date_local,
-    dur:        Math.round((a.moving_time || a.elapsed_time || 0) / 60),
-    dist:       a.distance ? +(a.distance / 1000).toFixed(2) : 0,
-    cal:        a.calories || 0,
-    elev:       a.total_elevation_gain || 0,
-    rpe:        a.perceived_exertion || null,
-  }));
-}
-
-/* ════════════════════════════════════════════
-   LOADING / CONNECT SCREENS
-   ════════════════════════════════════════════ */
-
-function showConnectScreen() {
-  let el = document.getElementById('connect-screen');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'connect-screen';
-    el.style.cssText = `
-      position:fixed;inset:0;background:var(--bg,#f9fafb);
-      display:flex;flex-direction:column;align-items:center;
-      justify-content:center;z-index:9999;padding:32px;text-align:center;
-    `;
-    el.innerHTML = `
-      <div style="font-size:64px;margin-bottom:16px">🏅</div>
-      <h1 style="font-size:24px;font-weight:700;margin:0 0 8px">Sport Tracker</h1>
-      <p style="color:#6b7280;margin:0 0 32px;max-width:320px">
-        Connecte ton compte Strava pour voir tes activités en temps réel.
-      </p>
-      <button onclick="connectStrava()" style="
-        background:#FC5200;color:#fff;border:none;padding:14px 28px;
-        border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;
-        display:flex;align-items:center;gap:10px;
-      ">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
-        </svg>
-        Se connecter avec Strava
-      </button>
-    `;
-    document.body.appendChild(el);
-  }
-  el.style.display = 'flex';
-}
-
-function hideConnectScreen() {
-  const el = document.getElementById('connect-screen');
-  if (el) el.style.display = 'none';
-}
-
-function showLoading(msg) {
-  let el = document.getElementById('loading-screen');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'loading-screen';
-    el.style.cssText = `
-      position:fixed;inset:0;background:var(--bg,#f9fafb);
-      display:flex;flex-direction:column;align-items:center;
-      justify-content:center;z-index:9998;gap:16px;
-    `;
-    el.innerHTML = `
-      <div style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#FC5200;border-radius:50%;animation:spin .8s linear infinite"></div>
-      <div id="loading-msg" style="color:#6b7280;font-size:15px"></div>
-      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
-    `;
-    document.body.appendChild(el);
-  }
-  document.getElementById('loading-msg').textContent = msg || 'Chargement…';
-  el.style.display = 'flex';
-}
-
-function hideLoading() {
-  const el = document.getElementById('loading-screen');
-  if (el) el.style.display = 'none';
 }
 
 /* ════════════════════════════════════════════
@@ -469,7 +305,6 @@ function renderCharts(t) {
   if (t === 'pie')     buildPie();
 }
 
-/* ── Radar ── */
 function buildRadar() {
   const SPORTS = [
     { type: 'Run',              lbl: 'Course' },
@@ -482,7 +317,6 @@ function buildRadar() {
   const datasets = SPORTS.map(({ type, lbl }) => {
     const aa = acts.filter(a => a.sport_type === type);
     if (!aa.length) return null;
-
     const s       = sp(type);
     const freq    = Math.min(aa.length / 3, 10);
     const avgDist = aa.reduce((s, a) => s + (a.dist || 0), 0) / aa.length;
@@ -491,22 +325,11 @@ function buildRadar() {
     const avgElev = aa.reduce((s, a) => s + (a.elev || 0), 0) / aa.length;
     const rpeActs = aa.filter(a => a.rpe);
     const avgRpe  = rpeActs.length ? rpeActs.reduce((s, a) => s + (a.rpe || 0), 0) / rpeActs.length : 0;
-
     return {
       label: lbl,
-      data: [
-        freq,
-        Math.min(avgDist / MAX[1] * 10, 10),
-        Math.min(avgDur  / MAX[2] * 10, 10),
-        Math.min(avgCal  / MAX[3] * 10, 10),
-        Math.min(avgElev / MAX[4] * 10, 10),
-        avgRpe,
-      ],
-      backgroundColor:      s.color + '30',
-      borderColor:          s.color,
-      borderWidth:          2,
-      pointBackgroundColor: s.color,
-      pointRadius:          4,
+      data: [freq, Math.min(avgDist/MAX[1]*10,10), Math.min(avgDur/MAX[2]*10,10), Math.min(avgCal/MAX[3]*10,10), Math.min(avgElev/MAX[4]*10,10), avgRpe],
+      backgroundColor: s.color+'30', borderColor: s.color, borderWidth: 2,
+      pointBackgroundColor: s.color, pointRadius: 4,
     };
   }).filter(Boolean);
 
@@ -515,24 +338,13 @@ function buildRadar() {
     type: 'radar',
     data: { labels: LABELS, datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        r: {
-          min: 0, max: 10,
-          ticks: { stepSize: 2, font: { size: 10 } },
-          grid:  { color: '#e5e7eb' },
-          pointLabels: { font: { size: 12, weight: '600' } },
-        },
-      },
-      plugins: {
-        legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 16, usePointStyle: true } },
-      },
+      responsive: true, maintainAspectRatio: false,
+      scales: { r: { min: 0, max: 10, ticks: { stepSize: 2, font: { size: 10 } }, grid: { color: '#e5e7eb' }, pointLabels: { font: { size: 12, weight: '600' } } } },
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 16, usePointStyle: true } } },
     },
   });
 }
 
-/* ── Heatmap ── */
 function buildHeatmap() {
   const dm = {};
   acts.forEach(a => { dm[a.date] = (dm[a.date] || 0) + (a.dur || 30); });
@@ -552,9 +364,7 @@ function buildHeatmap() {
   start.setDate(today.getDate() - 364);
   while (start.getDay() !== 1) start.setDate(start.getDate() - 1);
 
-  const months  = [];
-  let   prevMo  = -1;
-  let   weeksHTML = '';
+  const months = []; let prevMo = -1; let weeksHTML = '';
   const d = new Date(start);
 
   for (let w = 0; w < 53; w++) {
@@ -583,12 +393,9 @@ function buildHeatmap() {
     ${moRow}
     <div style="display:flex;align-items:flex-start">
       <div style="display:flex;flex-direction:column;gap:3px;margin-right:6px;font-size:10px;color:var(--muted)">
-        <span style="height:13px"></span>
-        <span style="height:13px;display:flex;align-items:center">Lun</span>
-        <span style="height:13px"></span>
-        <span style="height:13px;display:flex;align-items:center">Mer</span>
-        <span style="height:13px"></span>
-        <span style="height:13px;display:flex;align-items:center">Ven</span>
+        <span style="height:13px"></span><span style="height:13px;display:flex;align-items:center">Lun</span>
+        <span style="height:13px"></span><span style="height:13px;display:flex;align-items:center">Mer</span>
+        <span style="height:13px"></span><span style="height:13px;display:flex;align-items:center">Ven</span>
         <span style="height:13px"></span>
       </div>
       <div class="hm-grid">${weeksHTML}</div>
@@ -596,116 +403,54 @@ function buildHeatmap() {
   `;
 }
 
-/* ── Weekly bars ── */
 function buildWeekly() {
-  const now    = new Date();
-  const labels = [];
-  const data   = [];
-
+  const now = new Date(); const labels = []; const data = [];
   for (let i = 11; i >= 0; i--) {
-    const end = new Date(now); end.setDate(now.getDate() - i * 7); end.setHours(23, 59, 59, 999);
-    const st  = new Date(end); st.setDate(end.getDate() - 6);      st.setHours(0, 0, 0, 0);
-    const mo  = acts
-      .filter(a => { const d = new Date(a.date); return d >= st && d <= end; })
-      .reduce((s, a) => s + (a.dur || 0), 0);
-    labels.push(`${st.getDate()}/${st.getMonth() + 1}`);
-    data.push(mo);
+    const end = new Date(now); end.setDate(now.getDate() - i * 7); end.setHours(23,59,59,999);
+    const st  = new Date(end); st.setDate(end.getDate() - 6);      st.setHours(0,0,0,0);
+    const mo  = acts.filter(a => { const d = new Date(a.date); return d >= st && d <= end; }).reduce((s,a) => s + (a.dur||0), 0);
+    labels.push(`${st.getDate()}/${st.getMonth()+1}`); data.push(mo);
   }
-
   if (charts.weekly) charts.weekly.destroy();
   charts.weekly = new Chart(document.getElementById('weeklyC'), {
     type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Minutes', data,
-        backgroundColor: '#FF6B3580', borderColor: '#FF6B35',
-        borderWidth: 1, borderRadius: 6,
-      }],
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 }, callback: v => v + ' min' } },
-        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-      },
-    },
+    data: { labels, datasets: [{ label: 'Minutes', data, backgroundColor: '#FF6B3580', borderColor: '#FF6B35', borderWidth: 1, borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 }, callback: v => v+' min' } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } } },
   });
 }
 
-/* ── Evolution line ── */
 function buildEvo() {
-  const now    = new Date();
-  const labels = [];
-  const data   = [];
-  const M2     = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-
+  const now = new Date(); const labels = []; const data = [];
+  const M2 = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
   for (let i = 11; i >= 0; i--) {
-    const st = new Date(now.getFullYear(), now.getMonth() - i,     1);
-    const en = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-    const km = acts
-      .filter(a => a.sport_type === 'Run' && new Date(a.date) >= st && new Date(a.date) <= en)
-      .reduce((s, a) => s + (a.dist || 0), 0);
-    labels.push(M2[st.getMonth()]);
-    data.push(+km.toFixed(2));
+    const st = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const en = new Date(now.getFullYear(), now.getMonth()-i+1, 0);
+    const km = acts.filter(a => a.sport_type==='Run' && new Date(a.date)>=st && new Date(a.date)<=en).reduce((s,a)=>s+(a.dist||0),0);
+    labels.push(M2[st.getMonth()]); data.push(+km.toFixed(2));
   }
-
   if (charts.evo) charts.evo.destroy();
   charts.evo = new Chart(document.getElementById('evoC'), {
     type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Km courus', data,
-        borderColor: '#FF6B35', backgroundColor: '#FF6B3515',
-        fill: true, tension: .4,
-        pointBackgroundColor: '#FF6B35', pointRadius: 5,
-      }],
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 }, callback: v => v + ' km' } },
-        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-      },
-    },
+    data: { labels, datasets: [{ label: 'Km courus', data, borderColor: '#FF6B35', backgroundColor: '#FF6B3515', fill: true, tension: .4, pointBackgroundColor: '#FF6B35', pointRadius: 5 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 }, callback: v => v+' km' } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } } },
   });
 }
 
-/* ── Pie / doughnut ── */
 function buildPie() {
   const totals = {};
-  acts.forEach(a => {
-    const s = sp(a.sport_type);
-    if (!totals[s.lbl]) totals[s.lbl] = { min: 0, color: s.color };
-    totals[s.lbl].min += (a.dur || 0);
-  });
-
-  const sorted = Object.entries(totals).sort((a, b) => b[1].min - a[1].min);
-  const total  = sorted.reduce((s, [, v]) => s + v.min, 0);
-
+  acts.forEach(a => { const s = sp(a.sport_type); if (!totals[s.lbl]) totals[s.lbl] = { min: 0, color: s.color }; totals[s.lbl].min += (a.dur||0); });
+  const sorted = Object.entries(totals).sort((a,b) => b[1].min - a[1].min);
+  const total  = sorted.reduce((s,[,v]) => s+v.min, 0);
   if (charts.pie) charts.pie.destroy();
   charts.pie = new Chart(document.getElementById('pieC'), {
     type: 'doughnut',
-    data: {
-      labels: sorted.map(([k]) => k),
-      datasets: [{ data: sorted.map(([, v]) => v.min), backgroundColor: sorted.map(([, v]) => v.color), borderWidth: 0 }],
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false, cutout: '65%',
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.label}: ${c.raw} min` } } },
-    },
+    data: { labels: sorted.map(([k])=>k), datasets: [{ data: sorted.map(([,v])=>v.min), backgroundColor: sorted.map(([,v])=>v.color), borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.label}: ${c.raw} min` } } } },
   });
-
-  document.getElementById('pie-legend').innerHTML = sorted.map(([lbl, v]) => `
+  document.getElementById('pie-legend').innerHTML = sorted.map(([lbl,v]) => `
     <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
       <div style="width:12px;height:12px;border-radius:3px;background:${v.color};flex-shrink:0"></div>
-      <div>
-        <div style="font-weight:600;font-size:13px">${lbl}</div>
-        <div style="color:var(--muted);font-size:12px">${fmtDur(v.min)} · ${Math.round(v.min / total * 100)}%</div>
-      </div>
+      <div><div style="font-weight:600;font-size:13px">${lbl}</div><div style="color:var(--muted);font-size:12px">${fmtDur(v.min)} · ${Math.round(v.min/total*100)}%</div></div>
     </div>
   `).join('');
 }
@@ -714,70 +459,55 @@ function buildPie() {
    OBJECTIVES
    ════════════════════════════════════════════ */
 function renderGoals() {
-  const now  = new Date();
-  const wk   = getMonday(now);
-  const wa   = acts.filter(a => new Date(a.date) >= wk);
-
+  const now = new Date(); const wk = getMonday(now);
+  const wa  = acts.filter(a => new Date(a.date) >= wk);
   const wSess = wa.length;
-  const wMin  = wa.reduce((s, a) => s + (a.dur  || 0), 0);
-  const wRun  = wa.filter(a => a.sport_type === 'Run').reduce((s, a) => s + (a.dist || 0), 0);
-  const wRide = wa.filter(a => ['Ride','MountainBikeRide'].includes(a.sport_type)).reduce((s, a) => s + (a.dist || 0), 0);
+  const wMin  = wa.reduce((s,a) => s+(a.dur||0), 0);
+  const wRun  = wa.filter(a => a.sport_type==='Run').reduce((s,a) => s+(a.dist||0), 0);
+  const wRide = wa.filter(a => ['Ride','MountainBikeRide'].includes(a.sport_type)).reduce((s,a) => s+(a.dist||0), 0);
 
   const items = [
-    { ic: '🏅', lbl: 'Séances cette semaine', cur: wSess,  tgt: goals.sess,   unit: 'séances', fmt: v => v,              color: '#8B5CF6' },
-    { ic: '⏱️', lbl: 'Temps actif',           cur: wMin,   tgt: goals.min,    unit: 'min',     fmt: fmtDur,              color: '#FF6B35' },
-    { ic: '🏃', lbl: 'Distance course',        cur: wRun,   tgt: goals.runKm,  unit: 'km',      fmt: v => v.toFixed(1),   color: '#FF6B35' },
-    { ic: '🚴', lbl: 'Distance vélo',          cur: wRide,  tgt: goals.rideKm, unit: 'km',      fmt: v => v.toFixed(1),   color: '#3B82F6' },
+    { ic: '🏅', lbl: 'Séances cette semaine', cur: wSess,  tgt: goals.sess,   unit: 'séances', fmt: v => v,            color: '#8B5CF6' },
+    { ic: '⏱️', lbl: 'Temps actif',           cur: wMin,   tgt: goals.min,    unit: 'min',     fmt: fmtDur,            color: '#FF6B35' },
+    { ic: '🏃', lbl: 'Distance course',        cur: wRun,   tgt: goals.runKm,  unit: 'km',      fmt: v => v.toFixed(1), color: '#FF6B35' },
+    { ic: '🚴', lbl: 'Distance vélo',          cur: wRide,  tgt: goals.rideKm, unit: 'km',      fmt: v => v.toFixed(1), color: '#3B82F6' },
   ];
 
   document.getElementById('goals-content').innerHTML = items.map(o => {
-    const pct  = Math.min(o.cur / Math.max(o.tgt, 1) * 100, 100);
-    const done = o.cur >= o.tgt;
+    const pct = Math.min(o.cur / Math.max(o.tgt,1) * 100, 100);
     return `
       <div class="obj-card">
         <div class="obj-row">
           <div class="obj-title"><span style="font-size:20px">${o.ic}</span>${o.lbl}</div>
-          ${done ? '<span style="font-size:18px">✅</span>' : ''}
+          ${o.cur >= o.tgt ? '<span style="font-size:18px">✅</span>' : ''}
         </div>
         <div class="pbar"><div class="pfill" style="width:${pct}%;background:${o.color}"></div></div>
-        <div class="obj-nums">
-          <span>${o.fmt(o.cur)} ${o.unit}</span>
-          <span>Objectif : ${o.tgt} ${o.unit}</span>
-        </div>
+        <div class="obj-nums"><span>${o.fmt(o.cur)} ${o.unit}</span><span>Objectif : ${o.tgt} ${o.unit}</span></div>
       </div>
     `;
   }).join('');
 }
 
 function openGoals() {
-  document.getElementById('g-sess').value = goals.sess;
-  document.getElementById('g-min').value  = goals.min;
-  document.getElementById('g-run').value  = goals.runKm;
-  document.getElementById('g-ride').value = goals.rideKm;
+  document.getElementById('g-sess').value  = goals.sess;
+  document.getElementById('g-min').value   = goals.min;
+  document.getElementById('g-run').value   = goals.runKm;
+  document.getElementById('g-ride').value  = goals.rideKm;
   document.getElementById('goals-modal').style.display = 'flex';
 }
 function closeGoals() { document.getElementById('goals-modal').style.display = 'none'; }
-
 function saveGoals() {
-  goals = {
-    sess:   parseInt(document.getElementById('g-sess').value)  || 3,
-    min:    parseInt(document.getElementById('g-min').value)   || 180,
-    runKm:  parseFloat(document.getElementById('g-run').value) || 15,
-    rideKm: parseFloat(document.getElementById('g-ride').value)|| 50,
-  };
+  goals = { sess: parseInt(document.getElementById('g-sess').value)||3, min: parseInt(document.getElementById('g-min').value)||180, runKm: parseFloat(document.getElementById('g-run').value)||15, rideKm: parseFloat(document.getElementById('g-ride').value)||50 };
   localStorage.setItem('goals_v2', JSON.stringify(goals));
-  closeGoals();
-  renderGoals();
+  closeGoals(); renderGoals();
 }
 
 /* ════════════════════════════════════════════
    ADD ACTIVITY
    ════════════════════════════════════════════ */
 function openAdd(ds) {
-  document.getElementById('f-date').value = ds || new Date().toISOString().slice(0, 10);
-  ['f-name','f-dur','f-cal','f-dist','f-rpe','f-notes'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
+  document.getElementById('f-date').value = ds || new Date().toISOString().slice(0,10);
+  ['f-name','f-dur','f-cal','f-dist','f-rpe','f-notes'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('add-modal').style.display = 'flex';
 }
 function closeAdd() { document.getElementById('add-modal').style.display = 'none'; }
@@ -786,29 +516,20 @@ function saveAct() {
   const type = document.getElementById('f-sport').value;
   const date = document.getElementById('f-date').value;
   if (!date) { alert('Choisis une date !'); return; }
-
   const a = {
-    id:         'm_' + Date.now(),
-    src:        'manual',
-    name:       document.getElementById('f-name').value  || sp(type).lbl,
-    sport_type: type,
-    date,
-    ts:         date + 'T12:00:00',
-    dur:        parseInt(document.getElementById('f-dur').value)    || 0,
-    cal:        parseInt(document.getElementById('f-cal').value)    || 0,
-    dist:       parseFloat(document.getElementById('f-dist').value) || 0,
-    rpe:        parseInt(document.getElementById('f-rpe').value)    || null,
-    elev:       0,
-    notes:      document.getElementById('f-notes').value,
+    id: 'm_' + Date.now(), src: 'manual',
+    name: document.getElementById('f-name').value || sp(type).lbl,
+    sport_type: type, date, ts: date + 'T12:00:00',
+    dur:  parseInt(document.getElementById('f-dur').value)    || 0,
+    cal:  parseInt(document.getElementById('f-cal').value)    || 0,
+    dist: parseFloat(document.getElementById('f-dist').value) || 0,
+    rpe:  parseInt(document.getElementById('f-rpe').value)    || null,
+    elev: 0, notes: document.getElementById('f-notes').value,
   };
-
   manual.unshift(a);
   localStorage.setItem('manual_v2', JSON.stringify(manual));
-  acts = [...acts, a].sort((a, b) => new Date(b.ts || b.date) - new Date(a.ts || a.date));
-
-  closeAdd();
-  renderDash();
-  renderCal();
+  acts = [...acts, a].sort((a,b) => new Date(b.ts||b.date) - new Date(a.ts||a.date));
+  closeAdd(); renderDash(); renderCal();
   if (curPage === 'stats') renderCharts();
   if (curPage === 'goals') renderGoals();
 }
@@ -817,100 +538,45 @@ function saveAct() {
    HELPERS
    ════════════════════════════════════════════ */
 function fmtDur(m) {
-  if (!m || m === 0) return '—';
+  if (!m) return '—';
   if (m < 60) return m + 'min';
-  const h  = Math.floor(m / 60);
-  const mn = m % 60;
-  return mn > 0 ? `${h}h${String(mn).padStart(2, '0')}` : `${h}h`;
+  const h = Math.floor(m/60), mn = m%60;
+  return mn > 0 ? `${h}h${String(mn).padStart(2,'0')}` : `${h}h`;
 }
-
 function fmtDate(ds) {
   if (!ds) return '';
-  const d = new Date(ds + 'T12:00:00');
-  const t = new Date();
-  const y = new Date(t); y.setDate(t.getDate() - 1);
-  if (ds === t.toISOString().slice(0, 10)) return "Aujourd'hui";
-  if (ds === y.toISOString().slice(0, 10)) return 'Hier';
+  const d = new Date(ds+'T12:00:00'), t = new Date(), y = new Date(t);
+  y.setDate(t.getDate()-1);
+  if (ds === t.toISOString().slice(0,10)) return "Aujourd'hui";
+  if (ds === y.toISOString().slice(0,10)) return 'Hier';
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
-
 function getMonday(d) {
-  const r = new Date(d);
-  r.setHours(0, 0, 0, 0);
+  const r = new Date(d); r.setHours(0,0,0,0);
   const day = r.getDay() || 7;
   if (day !== 1) r.setDate(r.getDate() - day + 1);
   return r;
 }
-
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 /* ════════════════════════════════════════════
    INIT
    ════════════════════════════════════════════ */
 async function init() {
-  // Render dashboard immediately with manual activities
+  // Afficher immédiatement avec les activités manuelles + cache
+  const cache = JSON.parse(localStorage.getItem('strava_cache') || '[]');
+  if (cache.length) { STRAVA = cache; rebuildActs(); }
   renderDash();
   renderCal();
 
-  // Handle OAuth callback (?code=... in URL)
-  const params = new URLSearchParams(window.location.search);
-  const code   = params.get('code');
-  const error  = params.get('error');
-
-  if (error) {
-    window.history.replaceState({}, '', window.location.pathname);
-    showConnectScreen();
-    return;
-  }
-
-  if (code) {
-    window.history.replaceState({}, '', window.location.pathname);
-    showLoading('Connexion à Strava…');
-    try {
-      const token = await exchangeCode(code);
-      await loadStravaAndRender(token);
-    } catch (e) {
-      console.error('OAuth error:', e);
-      hideLoading();
-      showConnectScreen();
-    }
-    return;
-  }
-
-  // Try existing tokens
-  const token = await getValidToken();
-  if (token) {
-    // Try to load from cache first (instant display)
-    const cache = JSON.parse(localStorage.getItem('strava_cache') || '[]');
-    if (cache.length) {
-      STRAVA = cache;
-      rebuildActs();
-      renderDash();
-      renderCal();
-    }
-    // Then refresh in background
-    showLoading('Synchronisation Strava…');
-    await loadStravaAndRender(token);
-  } else {
-    showConnectScreen();
-  }
-}
-
-async function loadStravaAndRender(token) {
-  try {
-    const fresh = await fetchAllActivities(token);
-    STRAVA = fresh;
-    localStorage.setItem('strava_cache', JSON.stringify(fresh));
+  // Charger data.json en arrière-plan
+  const ok = await loadStravaData();
+  if (ok) {
     rebuildActs();
-    hideLoading();
     renderDash();
     renderCal();
     if (curPage === 'stats') renderCharts();
     if (curPage === 'goals') renderGoals();
-  } catch (e) {
-    console.error('Strava fetch error:', e);
-    hideLoading();
-    // Keep using cache if available
   }
 }
 
