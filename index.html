@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SportTracker — Max</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"
+          integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi"
+          crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Sidebar (desktop) ── -->
+  <nav class="sidebar">
+    <div class="logo">🏃 SportTracker</div>
+    <div class="nav-link on" onclick="go('dash')"><span class="ic">📊</span> Tableau de bord</div>
+    <div class="nav-link"    onclick="go('cal')"><span class="ic">📅</span> Calendrier</div>
+    <div class="nav-link"    onclick="go('stats')"><span class="ic">📈</span> Statistiques</div>
+    <div class="nav-link"    onclick="go('goals')"><span class="ic">🎯</span> Objectifs</div>
+    <div class="sidebar-footer">
+      <button class="btn btn-p btn-full" onclick="openAdd()">+ Ajouter séance</button>
+    </div>
+  </nav>
+
+  <!-- ── Bottom nav (mobile) ── -->
+  <nav class="bnav">
+    <div class="bni-wrap">
+      <div class="bni on" onclick="go('dash')"><span class="ic">📊</span>Dashboard</div>
+      <div class="bni"    onclick="go('cal')"><span class="ic">📅</span>Calendrier</div>
+      <div class="bni"    onclick="go('stats')"><span class="ic">📈</span>Stats</div>
+      <div class="bni"    onclick="go('goals')"><span class="ic">🎯</span>Objectifs</div>
+    </div>
+  </nav>
+
+  <!-- ── FAB mobile ── -->
+  <button class="fab" onclick="openAdd()">+</button>
+
+  <!-- ── Main content ── -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div id="page-dash" class="page on">
+      <div class="ph">
+        <div>
+          <h1 id="greet">Bonjour, Max 👋</h1>
+          <p id="sub"></p>
+        </div>
+        <div id="streak-el"></div>
+      </div>
+      <div class="g4" id="stat-cards"></div>
+      <div class="card">
+        <div class="ct">Activités récentes</div>
+        <div id="rec-acts"></div>
+      </div>
+    </div>
+
+    <!-- CALENDRIER -->
+    <div id="page-cal" class="page">
+      <div class="ph"><h1>Calendrier</h1></div>
+      <div class="card">
+        <div class="cal-nav">
+          <button class="cbtn" onclick="calShift(-1)">&#8249;</button>
+          <h2 id="cal-lbl"></h2>
+          <button class="cbtn" onclick="calShift(1)">&#8250;</button>
+        </div>
+        <div class="cal-wrap">
+          <div class="dh">Lun</div><div class="dh">Mar</div><div class="dh">Mer</div>
+          <div class="dh">Jeu</div><div class="dh">Ven</div><div class="dh">Sam</div><div class="dh">Dim</div>
+        </div>
+        <div class="cal-wrap" id="cal-body"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="ct">Légende</div>
+        <div class="legend-row">
+          <div class="legend-item"><div class="legend-swatch" style="background:#FF6B3530;border-color:#FF6B3370"></div>Course</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#3B82F630;border-color:#3B82F670"></div>Vélo</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#10B98130;border-color:#10B98170"></div>VTT</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#06B6D430;border-color:#06B6D470"></div>Marche / Rando</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#8B5CF630;border-color:#8B5CF670"></div>Muscu / Autre</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATISTIQUES -->
+    <div id="page-stats" class="page">
+      <div class="ph"><h1>Statistiques</h1></div>
+      <div class="tabs">
+        <div class="tab on"  onclick="showChart('radar')">Radar</div>
+        <div class="tab"     onclick="showChart('heatmap')">Heatmap</div>
+        <div class="tab"     onclick="showChart('weekly')">Hebdo</div>
+        <div class="tab"     onclick="showChart('evo')">Évolution</div>
+        <div class="tab"     onclick="showChart('pie')">Répartition</div>
+      </div>
+
+      <div id="ch-radar" class="card">
+        <div class="ct">Comparaison par sport (normalisé /10)</div>
+        <div class="cc"><canvas id="radarC"></canvas></div>
+      </div>
+      <div id="ch-heatmap" class="card" style="display:none">
+        <div class="ct">Activité annuelle — durée (minutes)</div>
+        <div class="hm-outer"><div id="hm-inner"></div></div>
+        <div class="hm-legend">
+          Moins &nbsp;
+          <div class="hm-cell" style="background:#ebedf0"></div>
+          <div class="hm-cell" style="background:#ffd5c4"></div>
+          <div class="hm-cell" style="background:#ffac8a"></div>
+          <div class="hm-cell" style="background:#ff7040"></div>
+          <div class="hm-cell" style="background:#FF6B35"></div>
+          &nbsp; Plus
+        </div>
+      </div>
+      <div id="ch-weekly" class="card" style="display:none">
+        <div class="ct">Minutes d'activité par semaine (12 dernières)</div>
+        <div class="cc"><canvas id="weeklyC"></canvas></div>
+      </div>
+      <div id="ch-evo" class="card" style="display:none">
+        <div class="ct">Distance course à pied — par mois</div>
+        <div class="cc"><canvas id="evoC"></canvas></div>
+      </div>
+      <div id="ch-pie" class="card" style="display:none">
+        <div class="ct">Répartition du temps par sport</div>
+        <div class="g2" style="align-items:center">
+          <div class="cc" style="height:240px"><canvas id="pieC"></canvas></div>
+          <div id="pie-legend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OBJECTIFS -->
+    <div id="page-goals" class="page">
+      <div class="ph">
+        <div><h1>Objectifs de la semaine</h1></div>
+        <button class="btn btn-s" onclick="openGoals()">✏️ Modifier</button>
+      </div>
+      <div id="goals-content"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Modal : Ajouter séance ── -->
+<div id="add-modal" class="overlay" style="display:none" onclick="if(event.target===this)closeAdd()">
+  <div class="modal">
+    <h3>➕ Nouvelle séance</h3>
+    <div class="fg">
+      <label>Sport</label>
+      <select id="f-sport">
+        <option value="Musculation">🏋️ Musculation / Gym</option>
+        <option value="Run">🏃 Course à pied</option>
+        <option value="Ride">🚴 Vélo</option>
+        <option value="MountainBikeRide">🚵 VTT</option>
+        <option value="Walk">🚶 Marche</option>
+        <option value="Hike">🥾 Randonnée</option>
+        <option value="Tennis">🎾 Tennis</option>
+        <option value="Natation">🏊 Natation</option>
+        <option value="Other">💪 Autre</option>
+      </select>
+    </div>
+    <div class="fg"><label>Nom (optionnel)</label><input type="text" id="f-name" placeholder="Ex : Séance dos/biceps"></div>
+    <div class="fg"><label>Date</label><input type="date" id="f-date"></div>
+    <div class="fr">
+      <div class="fg"><label>Durée (min)</label><input type="number" id="f-dur" placeholder="60" min="1"></div>
+      <div class="fg"><label>Calories</label><input type="number" id="f-cal" placeholder="350" min="0"></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>Distance (km)</label><input type="number" id="f-dist" placeholder="0" step="0.1" min="0"></div>
+      <div class="fg"><label>Intensité (1-10)</label><input type="number" id="f-rpe" placeholder="7" min="1" max="10"></div>
+    </div>
+    <div class="fg"><label>Notes</label><textarea id="f-notes" rows="2" placeholder="Comment tu t'es senti…"></textarea></div>
+    <div class="btn-row">
+      <button class="btn btn-s" onclick="closeAdd()">Annuler</button>
+      <button class="btn btn-p" onclick="saveAct()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal : Objectifs ── -->
+<div id="goals-modal" class="overlay" style="display:none" onclick="if(event.target===this)closeGoals()">
+  <div class="modal">
+    <h3>🎯 Objectifs hebdomadaires</h3>
+    <div class="fg"><label>Séances / semaine</label><input type="number" id="g-sess" min="1" max="21"></div>
+    <div class="fg"><label>Minutes d'activité / semaine</label><input type="number" id="g-min" min="10" step="10"></div>
+    <div class="fg"><label>Km de course / semaine</label><input type="number" id="g-run" min="0" step="0.5"></div>
+    <div class="fg"><label>Km de vélo / semaine</label><input type="number" id="g-ride" min="0" step="1"></div>
+    <div class="btn-row">
+      <button class="btn btn-s" onclick="closeGoals()">Annuler</button>
+      <button class="btn btn-p" onclick="saveGoals()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Tooltip jour ── -->
+<div id="tip"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
