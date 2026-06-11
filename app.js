@@ -11,6 +11,7 @@ const SC = {
   Hike:             { icon: '🥾', lbl: 'Rando',    color: '#06B6D4' },
   Workout:          { icon: '🏅', lbl: 'Sport',    color: '#8B5CF6' },
   Musculation:      { icon: '🏋️', lbl: 'Muscu',    color: '#8B5CF6' },
+  WeightTraining:   { icon: '🏋️', lbl: 'Muscu',    color: '#8B5CF6' },
   Tennis:           { icon: '🎾', lbl: 'Tennis',   color: '#8B5CF6' },
   Natation:         { icon: '🏊', lbl: 'Natation', color: '#3B82F6' },
   Other:            { icon: '💪', lbl: 'Autre',    color: '#9CA3AF' },
@@ -463,13 +464,11 @@ function renderGoals() {
   const wa  = acts.filter(a => new Date(a.date) >= wk);
   const wSess = wa.length;
   const wMin  = wa.reduce((s,a) => s+(a.dur||0), 0);
-  const wRun  = wa.filter(a => a.sport_type==='Run').reduce((s,a) => s+(a.dist||0), 0);
   const wRide = wa.filter(a => ['Ride','MountainBikeRide'].includes(a.sport_type)).reduce((s,a) => s+(a.dist||0), 0);
 
   const items = [
     { ic: '🏅', lbl: 'Séances cette semaine', cur: wSess,  tgt: goals.sess,   unit: 'séances', fmt: v => v,            color: '#8B5CF6' },
     { ic: '⏱️', lbl: 'Temps actif',           cur: wMin,   tgt: goals.min,    unit: 'min',     fmt: fmtDur,            color: '#FF6B35' },
-    { ic: '🏃', lbl: 'Distance course',        cur: wRun,   tgt: goals.runKm,  unit: 'km',      fmt: v => v.toFixed(1), color: '#FF6B35' },
     { ic: '🚴', lbl: 'Distance vélo',          cur: wRide,  tgt: goals.rideKm, unit: 'km',      fmt: v => v.toFixed(1), color: '#3B82F6' },
   ];
 
