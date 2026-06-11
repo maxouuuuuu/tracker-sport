@@ -24,6 +24,26 @@ jobs:
       - name: Installer requests
         run: pip install requests
 
+      - name: Test connexion Strava
+        env:
+          STRAVA_CLIENT_ID:     ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+        run: |
+          echo "client_id = $STRAVA_CLIENT_ID"
+          echo "refresh_token (12 chars) = ${STRAVA_REFRESH_TOKEN:0:12}..."
+          python3 -c "
+          import os, requests
+          r = requests.post('https://www.strava.com/oauth/token', data={
+            'client_id':     os.environ['STRAVA_CLIENT_ID'],
+            'client_secret': os.environ['STRAVA_CLIENT_SECRET'],
+            'grant_type':    'refresh_token',
+            'refresh_token': os.environ['STRAVA_REFRESH_TOKEN'],
+          })
+          print('Status:', r.status_code)
+          print('Response:', r.text[:300])
+          "
+
       - name: Récupérer les activités Strava
         env:
           STRAVA_CLIENT_ID:     ${{ secrets.STRAVA_CLIENT_ID }}
