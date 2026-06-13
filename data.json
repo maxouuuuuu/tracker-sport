@@ -1,5 +1,18 @@
 [
   {
+    "id": "stv_18902116918",
+    "src": "strava",
+    "name": "Natation dans l'après-midi",
+    "sport_type": "Swim",
+    "date": "2026-06-13",
+    "ts": "2026-06-13T13:08:44Z",
+    "dur": 5,
+    "dist": 0.4,
+    "cal": 0,
+    "elev": 0,
+    "rpe": null
+  },
+  {
     "id": "stv_18896658572",
     "src": "strava",
     "name": "Night Swim",
