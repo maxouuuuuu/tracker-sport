@@ -1,5 +1,18 @@
 [
   {
+    "id": "stv_18896658572",
+    "src": "strava",
+    "name": "Night Swim",
+    "sport_type": "Swim",
+    "date": "2026-06-13",
+    "ts": "2026-06-13T01:00:45Z",
+    "dur": 3,
+    "dist": 0.2,
+    "cal": 0,
+    "elev": 0,
+    "rpe": null
+  },
+  {
     "id": "stv_18870091418",
     "src": "strava",
     "name": "Musculation 10/06/26",
