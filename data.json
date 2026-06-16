@@ -1,5 +1,18 @@
 [
   {
+    "id": "stv_18947669160",
+    "src": "strava",
+    "name": "Evening Workout",
+    "sport_type": "WeightTraining",
+    "date": "2026-06-16",
+    "ts": "2026-06-16T20:18:14Z",
+    "dur": 17,
+    "dist": 0.0,
+    "cal": 0,
+    "elev": 0,
+    "rpe": null
+  },
+  {
     "id": "stv_18902116918",
     "src": "strava",
     "name": "Natation dans l'après-midi",
