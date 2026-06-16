@@ -39,6 +39,90 @@ function rebuildActs() {
 }
 
 /* ════════════════════════════════════════════
+   GITHUB API — sync activités manuelles
+   ════════════════════════════════════════════ */
+const GH_REPO = 'maxouuuuuu/tracker-sport';
+const GH_FILE = 'manual.json';
+
+function getGHToken() { return localStorage.getItem('gh_token') || ''; }
+
+async function loadManualFromGitHub() {
+  try {
+    // Lecture sans auth (repo public) — API GitHub, toujours frais
+    const resp = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const content = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g, '')))));
+    return { activities: content, sha: data.sha };
+  } catch(e) { return null; }
+}
+
+async function saveManualToGitHub(activities) {
+  const token = getGHToken();
+  if (!token) return false;
+  try {
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    };
+    // Récupérer le SHA actuel
+    const getResp = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, { headers });
+    const sha = getResp.ok ? (await getResp.json()).sha : undefined;
+
+    const body = {
+      message: '➕ Activité manuelle',
+      content: btoa(unescape(encodeURIComponent(JSON.stringify(activities, null, 2)))),
+      branch: 'main',
+    };
+    if (sha) body.sha = sha;
+
+    const putResp = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+      method: 'PUT', headers, body: JSON.stringify(body),
+    });
+    return putResp.ok;
+  } catch(e) { return false; }
+}
+
+/* Token settings modal */
+function openTokenModal() {
+  let el = document.getElementById('token-modal');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'token-modal';
+    el.style.cssText = 'position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;z-index:9999';
+    el.innerHTML = `
+      <div style="background:var(--card,#fff);border-radius:16px;padding:28px;max-width:380px;width:90%;box-shadow:0 8px 32px #0002">
+        <h3 style="margin:0 0 8px;font-size:17px">🔑 Token GitHub</h3>
+        <p style="color:var(--muted,#6b7280);font-size:13px;margin:0 0 16px">
+          Pour synchroniser tes activités manuelles sur tous tes appareils, entre un token GitHub
+          avec accès <b>contents:write</b> sur le repo tracker-sport.<br><br>
+          <a href="https://github.com/settings/tokens/new?scopes=repo&description=Sport+Tracker" target="_blank" style="color:#3B82F6">Créer un token →</a>
+        </p>
+        <input id="gh-token-input" type="password" placeholder="ghp_xxxxxxxxxxxx"
+          style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:12px"
+          value="${getGHToken()}">
+        <div style="display:flex;gap:8px">
+          <button onclick="saveToken()" style="flex:1;background:#3B82F6;color:#fff;border:none;padding:10px;border-radius:8px;font-weight:600;cursor:pointer">Enregistrer</button>
+          <button onclick="document.getElementById('token-modal').remove()" style="flex:1;background:#f3f4f6;border:none;padding:10px;border-radius:8px;font-weight:600;cursor:pointer">Annuler</button>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+  }
+  el.style.display = 'flex';
+  setTimeout(() => document.getElementById('gh-token-input').focus(), 50);
+}
+
+function saveToken() {
+  const val = document.getElementById('gh-token-input').value.trim();
+  localStorage.setItem('gh_token', val);
+  document.getElementById('token-modal').remove();
+  alert(val ? '✅ Token enregistré !' : '🗑️ Token supprimé');
+}
+
+/* ════════════════════════════════════════════
    CHARGEMENT DATA.JSON (généré par GitHub Actions)
    ════════════════════════════════════════════ */
 async function loadStravaData() {
@@ -49,11 +133,9 @@ async function loadStravaData() {
     localStorage.setItem('strava_cache', JSON.stringify(STRAVA));
     return true;
   } catch (e) {
-    // Fallback sur le cache localStorage
     const cache = JSON.parse(localStorage.getItem('strava_cache') || '[]');
     if (cache.length) {
       STRAVA = cache;
-      console.log('📦 Données Strava chargées depuis le cache');
       return true;
     }
     return false;
@@ -531,6 +613,25 @@ function saveAct() {
   closeAdd(); renderDash(); renderCal();
   if (curPage === 'stats') renderCharts();
   if (curPage === 'goals') renderGoals();
+
+  // Sync vers GitHub si token disponible
+  if (getGHToken()) {
+    saveManualToGitHub(manual).then(ok => {
+      if (!ok) {
+        const msg = document.createElement('div');
+        msg.textContent = '⚠️ Sync GitHub échouée — vérifie ton token dans Paramètres';
+        msg.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#FEF3C7;color:#92400E;padding:10px 16px;border-radius:8px;font-size:13px;z-index:999;box-shadow:0 2px 8px #0002';
+        document.body.appendChild(msg);
+        setTimeout(() => msg.remove(), 4000);
+      }
+    });
+  } else {
+    const msg = document.createElement('div');
+    msg.innerHTML = '⚠️ Activité sauvée en local seulement. <span onclick="openTokenModal()" style="text-decoration:underline;cursor:pointer">Configurer GitHub →</span>';
+    msg.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#FEF3C7;color:#92400E;padding:10px 16px;border-radius:8px;font-size:13px;z-index:999;box-shadow:0 2px 8px #0002;white-space:nowrap';
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 5000);
+  }
 }
 
 /* ════════════════════════════════════════════
@@ -562,21 +663,28 @@ function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
    INIT
    ════════════════════════════════════════════ */
 async function init() {
-  // Afficher immédiatement avec les activités manuelles + cache
+  // Affichage immédiat depuis le cache
   const cache = JSON.parse(localStorage.getItem('strava_cache') || '[]');
-  if (cache.length) { STRAVA = cache; rebuildActs(); }
+  if (cache.length) { STRAVA = cache; }
+  manual = JSON.parse(localStorage.getItem('manual_v2') || '[]');
+  rebuildActs();
   renderDash();
   renderCal();
 
-  // Charger data.json en arrière-plan
-  const ok = await loadStravaData();
-  if (ok) {
-    rebuildActs();
-    renderDash();
-    renderCal();
-    if (curPage === 'stats') renderCharts();
-    if (curPage === 'goals') renderGoals();
+  // Charger manual.json depuis GitHub (toujours à jour, tous appareils)
+  const ghManual = await loadManualFromGitHub();
+  if (ghManual && ghManual.activities.length > 0) {
+    manual = ghManual.activities;
+    localStorage.setItem('manual_v2', JSON.stringify(manual));
   }
+
+  // Charger data.json Strava
+  await loadStravaData();
+  rebuildActs();
+  renderDash();
+  renderCal();
+  if (curPage === 'stats') renderCharts();
+  if (curPage === 'goals') renderGoals();
 }
 
 init();
