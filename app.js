@@ -662,7 +662,24 @@ function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 /* ════════════════════════════════════════════
    INIT
    ════════════════════════════════════════════ */
+function injectSettingsButton() {
+  const btn = document.createElement('button');
+  btn.id = 'settings-btn';
+  btn.title = 'Paramètres GitHub';
+  btn.textContent = '⚙️';
+  btn.style.cssText = `
+    position:fixed;bottom:20px;right:16px;z-index:900;
+    background:var(--card,#fff);border:1.5px solid #e5e7eb;
+    border-radius:50%;width:40px;height:40px;font-size:18px;
+    cursor:pointer;box-shadow:0 2px 8px #0002;
+    display:flex;align-items:center;justify-content:center;
+  `;
+  btn.onclick = openTokenModal;
+  document.body.appendChild(btn);
+}
+
 async function init() {
+  injectSettingsButton();
   // Affichage immédiat depuis le cache
   const cache = JSON.parse(localStorage.getItem('strava_cache') || '[]');
   if (cache.length) { STRAVA = cache; }
