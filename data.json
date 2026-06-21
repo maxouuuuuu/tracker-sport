@@ -1,5 +1,18 @@
 [
   {
+    "id": "stv_19012512500",
+    "src": "strava",
+    "name": "Afternoon Workout",
+    "sport_type": "Workout",
+    "date": "2026-06-21",
+    "ts": "2026-06-21T16:42:50Z",
+    "dur": 46,
+    "dist": 0.0,
+    "cal": 0,
+    "elev": 0,
+    "rpe": null
+  },
+  {
     "id": "stv_18947669160",
     "src": "strava",
     "name": "Evening Workout",
