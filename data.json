@@ -1,5 +1,18 @@
 [
   {
+    "id": "stv_19128207178",
+    "src": "strava",
+    "name": "Run 7000 Excite Live: Démarrage rapide",
+    "sport_type": "Run",
+    "date": "2026-06-30",
+    "ts": "2026-06-30T18:43:13Z",
+    "dur": 37,
+    "dist": 2.82,
+    "cal": 0,
+    "elev": 0,
+    "rpe": null
+  },
+  {
     "id": "stv_19101585117",
     "src": "strava",
     "name": "Afternoon Workout",
