@@ -1,5 +1,44 @@
 [
   {
+    "id": "stv_19191801784",
+    "src": "strava",
+    "name": "Evening Workout",
+    "sport_type": "Workout",
+    "date": "2026-07-05",
+    "ts": "2026-07-05T18:09:59Z",
+    "dur": 10,
+    "dist": 0.0,
+    "cal": 0,
+    "elev": 0,
+    "rpe": null
+  },
+  {
+    "id": "stv_19192115828",
+    "src": "strava",
+    "name": "Run 7000 Excite Live: Démarrage rapide",
+    "sport_type": "Run",
+    "date": "2026-07-05",
+    "ts": "2026-07-05T16:19:57Z",
+    "dur": 30,
+    "dist": 2.06,
+    "cal": 0,
+    "elev": 0,
+    "rpe": null
+  },
+  {
+    "id": "stv_19191796041",
+    "src": "strava",
+    "name": "Evening Workout",
+    "sport_type": "Workout",
+    "date": "2026-07-03",
+    "ts": "2026-07-03T19:22:58Z",
+    "dur": 2,
+    "dist": 0.03,
+    "cal": 0,
+    "elev": 0,
+    "rpe": null
+  },
+  {
     "id": "stv_19128207178",
     "src": "strava",
     "name": "Run 7000 Excite Live: Démarrage rapide",
