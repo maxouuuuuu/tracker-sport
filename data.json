@@ -1,5 +1,18 @@
 [
   {
+    "id": "stv_19285839646",
+    "src": "strava",
+    "name": "Petite sortie avec Jordan",
+    "sport_type": "Ride",
+    "date": "2026-07-12",
+    "ts": "2026-07-12T16:57:18Z",
+    "dur": 92,
+    "dist": 21.6,
+    "cal": 0,
+    "elev": 181.9,
+    "rpe": null
+  },
+  {
     "id": "stv_19191801784",
     "src": "strava",
     "name": "Evening Workout",
