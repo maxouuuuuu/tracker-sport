@@ -1,5 +1,18 @@
 [
   {
+    "id": "stv_19327522742",
+    "src": "strava",
+    "name": "Petite sortie sympa en soirée",
+    "sport_type": "Ride",
+    "date": "2026-07-15",
+    "ts": "2026-07-15T19:32:03Z",
+    "dur": 65,
+    "dist": 22.03,
+    "cal": 0,
+    "elev": 176.6,
+    "rpe": null
+  },
+  {
     "id": "stv_19285839646",
     "src": "strava",
     "name": "Petite sortie avec Jordan",
