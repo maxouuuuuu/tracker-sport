@@ -1,5 +1,18 @@
 [
   {
+    "id": "stv_19341715246",
+    "src": "strava",
+    "name": "Futsal",
+    "sport_type": "Workout",
+    "date": "2026-07-16",
+    "ts": "2026-07-16T19:46:52Z",
+    "dur": 123,
+    "dist": 8.55,
+    "cal": 0,
+    "elev": 0,
+    "rpe": null
+  },
+  {
     "id": "stv_19327522742",
     "src": "strava",
     "name": "Petite sortie sympa en soirée",
